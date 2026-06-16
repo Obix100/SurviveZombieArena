@@ -1,0 +1,709 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "ObiHub",
+    Icon = "rbxassetid://123576249131566",
+    Author = "By Obi",
+    Folder = "Obi",
+    Size = UDim2.fromOffset(580, 340),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 150,
+    Background = "",
+    BackgroundImageTransparency = 0.42,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+})
+
+Window:EditOpenButton({
+    Title = "Obi",
+    Icon = "monitor",
+    CornerRadius = UDim.new(0,16),
+    StrokeThickness = 2,
+    Color = ColorSequence.new(
+        Color3.fromHex("FF0F7B"),
+        Color3.fromHex("F89B29")
+    ),
+    Draggable = true,
+})
+
+local Movement = Window:Tab({
+    Title = "movement",
+    Icon = "compass"
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+
+Player.CharacterAdded:Connect(function(char)
+    Character = char
+    Humanoid = char:WaitForChild("Humanoid")
+end)
+
+local speedValue = 16
+local speedEnabled = false
+
+local jumpValue = 50
+local jumpEnabled = false
+
+Movement:Section({Title = "Speed"})
+
+Movement:Slider({
+    Title = "Speed",
+    Value = {Min = 16, Max = 500, Default = 50},
+    Step = 1,
+    Callback = function(value)
+        speedValue = value
+    end
+})
+
+Movement:Toggle({
+    Title = "Enable Speed",
+    Default = false,
+    Callback = function(state)
+        speedEnabled = state
+
+        if not state and Humanoid then
+            Humanoid.WalkSpeed = 16
+        end
+    end
+})
+
+Movement:Section({Title = "Jump"})
+
+Movement:Slider({
+    Title = "Jump",
+    Value = {Min = 50, Max = 500, Default = 50},
+    Step = 1,
+    Callback = function(value)
+        jumpValue = value
+    end
+})
+
+Movement:Toggle({
+    Title = "Enable Jump",
+    Default = false,
+    Callback = function(state)
+        jumpEnabled = state
+
+        if not state and Humanoid then
+            Humanoid.JumpPower = 50
+        end
+    end
+})
+
+RunService.RenderStepped:Connect(function()
+    if speedEnabled and Humanoid then
+        Humanoid.WalkSpeed = speedValue
+    end
+
+    if jumpEnabled and Humanoid then
+        Humanoid.JumpPower = jumpValue
+        Humanoid.UseJumpPower = true
+    end
+end)
+
+Movement:Section({Title = "Extra"})
+
+local UIS = game:GetService("UserInputService")
+
+local infJump = false
+local noclip = false
+local fly = false
+
+local flySpeed = 50
+local CFloop
+
+Movement:Toggle({
+    Title = "InfJump",
+    Default = false,
+    Callback = function(state)
+        infJump = state
+    end
+})
+
+UIS.JumpRequest:Connect(function()
+    if infJump and Humanoid then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+Movement:Toggle({
+    Title = "Noclip",
+    Default = false,
+    Callback = function(state)
+        noclip = state
+    end
+})
+
+RunService.Stepped:Connect(function()
+    if noclip and Character then
+        for _, v in pairs(Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+end)
+
+local function startFly()
+    if fly then return end
+    fly = true
+
+    local Head = Character:WaitForChild("Head")
+
+    Head.Anchored = true
+
+    CFloop = RunService.Heartbeat:Connect(function(deltaTime)
+        local camera = workspace.CurrentCamera
+        local cameraCFrame = camera.CFrame
+
+        local moveDirection = Humanoid.MoveDirection * (flySpeed * deltaTime)
+
+        local headCFrame = Head.CFrame
+        local cameraOffset = headCFrame:ToObjectSpace(cameraCFrame).Position
+
+        cameraCFrame = cameraCFrame * CFrame.new(
+            -cameraOffset.X,
+            -cameraOffset.Y,
+            -cameraOffset.Z + 1
+        )
+
+        local cameraPosition = cameraCFrame.Position
+        local headPosition = headCFrame.Position
+
+        local objectSpaceVelocity =
+            CFrame.new(
+                cameraPosition,
+                Vector3.new(headPosition.X, cameraPosition.Y, headPosition.Z)
+            ):VectorToObjectSpace(moveDirection)
+
+        Head.CFrame =
+            CFrame.new(headPosition) *
+            (cameraCFrame - cameraPosition) *
+            CFrame.new(objectSpaceVelocity)
+    end)
+end
+
+local function stopFly()
+    fly = false
+
+    if CFloop then
+        CFloop:Disconnect()
+        CFloop = nil
+    end
+
+    local Head = Character:FindFirstChild("Head")
+
+    if Head then
+        Head.Anchored = false
+    end
+end
+
+Movement:Toggle({
+    Title = "Fly",
+    Default = false,
+    Callback = function(state)
+        if state then
+            startFly()
+        else
+            stopFly()
+        end
+    end
+})
+
+local Main = Window:Tab({
+    Title = "main",
+    Icon = "swords"
+})
+
+Main:Section({Title = "Main"})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+
+local instantKill = false
+
+local function SetHipHeight(value)
+local char = LocalPlayer.Character
+if not char then return end
+
+local hum = char:FindFirstChildOfClass("Humanoid")
+if hum then
+    hum.HipHeight = value
+end
+
+end
+
+Main:Toggle({
+Title = "Instant Kill",
+Default = false,
+Callback = function(state)
+instantKill = state
+
+    if state then
+        SetHipHeight(25)
+    else
+        SetHipHeight(0)
+    end
+end
+
+})
+
+LocalPlayer.CharacterAdded:Connect(function()
+task.wait(1)
+
+if instantKill then
+    SetHipHeight(25)
+end
+
+end)
+
+task.spawn(function()
+local P = game:GetService("Players")
+local R = game:GetService("ReplicatedStorage")
+local L = P.LocalPlayer
+
+local Z
+
+pcall(function()
+    Z = require(L.PlayerScripts.Controllers.ZombieClient).Zombies
+end)
+
+if type(Z) ~= "table" then
+    for _,v in pairs(getgc(true)) do
+        if type(v) == "table"
+        and rawget(v,"Zombies")
+        and rawget(v,"ZombieModels") then
+            Z = v.Zombies
+            break
+        end
+    end
+end
+
+local D = R:WaitForChild("ZombieRemotes"):WaitForChild("ZombieDamage")
+
+while task.wait(0.2) do
+    if instantKill and Z then
+        for id, data in pairs(Z) do
+            if data
+            and not data.IsDying
+            and data.Health
+            and data.Health > 0 then
+                pcall(function()
+                    D:FireServer(id, math.huge)
+                end)
+            end
+        end
+    end
+end
+
+end)
+
+local avoidZombies = false
+local antiVoid = false
+local orbitZombie = false
+
+local orbitTarget = nil
+local lastOrbitSwitch = 0
+local antiVoidHeight = -25
+
+local orbitSpeed = 1
+local orbitRadius = 13
+
+Main:Toggle({
+    Title = "Avoid Zombies",
+    Default = false,
+    Callback = function(state)
+        avoidZombies = state
+    end
+})
+
+Main:Toggle({
+    Title = "Anti Void",
+    Default = false,
+    Callback = function(state)
+        antiVoid = state
+    end
+})
+
+Main:Section({Title = "Orbit"})
+
+Main:Toggle({
+    Title = "Orbit Zombie",
+    Default = false,
+    Callback = function(state)
+        orbitZombie = state
+    end
+})
+
+Main:Slider({
+    Title = "Orbit Speed",
+    Value = {Min = 1, Max = 500, Default = 1},
+    Step = 1,
+    Callback = function(value)
+        orbitSpeed = value
+    end
+})
+
+Main:Slider({
+    Title = "Orbit Radius",
+    Value = {Min = 3, Max = 150, Default = 13},
+    Step = 1,
+    Callback = function(value)
+        orbitRadius = value
+    end
+})
+
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+
+    if not char then
+        return
+    end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+
+    if not hrp then
+        return
+    end
+
+    if antiVoid and hrp.Position.Y < antiVoidHeight then
+        hrp.CFrame = CFrame.new(
+            hrp.Position.X,
+            25,
+            hrp.Position.Z
+        )
+    end
+
+    if avoidZombies then
+        local zombies = KAGetClosestZombies(1)
+
+        if #zombies > 0 then
+            local zombie = zombies[1]
+
+            if zombie.Position then
+                local dist = (zombie.Position - hrp.Position).Magnitude
+
+                if dist <= 15 then
+                    local randomOffset = Vector3.new(
+                        math.random(-60, 60),
+                        math.random(15, 30),
+                        math.random(-60, 60)
+                    )
+
+                    hrp.CFrame = CFrame.new(hrp.Position + randomOffset)
+                end
+            end
+        end
+    end
+
+    if orbitZombie then
+        local now = tick()
+
+        if now - lastOrbitSwitch >= 1 then
+            local zombies = KAGetClosestZombies(10)
+
+            if #zombies > 0 then
+                orbitTarget = zombies[math.random(1, #zombies)]
+                lastOrbitSwitch = now
+            end
+        end
+
+        if orbitTarget and orbitTarget.Model and orbitTarget.Position then
+            local angle = tick() * orbitSpeed
+
+            local offset = Vector3.new(
+                math.cos(angle) * orbitRadius,
+                5,
+                math.sin(angle) * orbitRadius
+            )
+
+            hrp.CFrame = CFrame.new(orbitTarget.Position + offset)
+        end
+    end
+end)
+
+Main:Section({Title = "Fps Booster"})
+
+Main:Button({
+    Title = "Fps Booster V1",
+    Callback = function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+        pcall(function()
+            setfpscap(120)
+        end)
+
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.Plastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter")
+            or v:IsA("Trail")
+            or v:IsA("Smoke")
+            or v:IsA("Fire")
+            or v:IsA("Sparkles") then
+                v.Enabled = false
+            elseif v:IsA("Explosion") then
+                v.BlastPressure = 0
+                v.BlastRadius = 0
+            end
+        end
+
+        local lighting = game:GetService("Lighting")
+
+        lighting.GlobalShadows = false
+        lighting.FogEnd = 9e9
+        lighting.Brightness = 0
+
+        for _, v in pairs(lighting:GetChildren()) do
+            if v:IsA("BlurEffect")
+            or v:IsA("SunRaysEffect")
+            or v:IsA("ColorCorrectionEffect")
+            or v:IsA("BloomEffect")
+            or v:IsA("DepthOfFieldEffect") then
+                v.Enabled = false
+            end
+        end
+    end
+})
+
+Main:Button({
+    Title = "Fps Booster V2",
+    Callback = function()
+
+        pcall(function()
+            setfpscap(240)
+        end)
+
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+
+        local Lighting = game:GetService("Lighting")
+        local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+        local function Optimize(obj)
+            if obj:IsA("BasePart") then
+                obj.Material = Enum.Material.Plastic
+                obj.Reflectance = 0
+                obj.CastShadow = false
+
+            elseif obj:IsA("MeshPart") then
+                obj.Material = Enum.Material.Plastic
+                obj.Reflectance = 0
+                obj.CastShadow = false
+                obj.TextureID = ""
+
+            elseif obj:IsA("Decal")
+                or obj:IsA("Texture") then
+                obj.Transparency = 1
+
+            elseif obj:IsA("ParticleEmitter")
+                or obj:IsA("Trail")
+                or obj:IsA("Smoke")
+                or obj:IsA("Fire")
+                or obj:IsA("Sparkles")
+                or obj:IsA("Beam") then
+                obj.Enabled = false
+
+            elseif obj:IsA("Explosion") then
+                obj.BlastPressure = 0
+                obj.BlastRadius = 0
+            end
+        end
+
+        for _, v in ipairs(game:GetDescendants()) do
+            Optimize(v)
+        end
+
+        game.DescendantAdded:Connect(function(v)
+            task.spawn(function()
+                Optimize(v)
+            end)
+        end)
+
+        Lighting.GlobalShadows = false
+        Lighting.Brightness = 0
+        Lighting.FogEnd = 9e9
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
+
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("BlurEffect")
+                or v:IsA("SunRaysEffect")
+                or v:IsA("ColorCorrectionEffect")
+                or v:IsA("BloomEffect")
+                or v:IsA("DepthOfFieldEffect")
+                or v:IsA("Atmosphere") then
+                v.Enabled = false
+            end
+        end
+
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 1
+        end
+    end
+})
+
+local SettingTab = Window:Tab({
+    Title = "setting",
+    Icon = "settings"
+})
+
+SettingTab:Section({Title = "Theme"})
+
+local ThemeSelector = SettingTab:Dropdown({
+    Title = "Theme Changer",
+    Values = {
+        "Dark", "Light", "Rose", "Plant", "Red", "Indigo", "Sky",
+        "Violet", "Amber", "Emerald", "Midnight", "Crimson", "Rainbow"
+    },
+    Value = "Crimson",
+    Multi = false,
+    AllowNone = false,
+    Callback = function(option)
+        local Selected = type(option) == "string" and option or tostring(option)
+        WindUI:SetTheme(Selected)
+    end
+})
+
+SettingTab:Section({Title = "Security"})
+
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local antiKick = true
+local antibanLoaded = false
+
+SettingTab:Toggle({
+    Title = "Anti ban (ko anti 100%)",
+    Default = true,
+    Callback = function(state)
+        antiKick = state
+    end
+})
+
+if not antibanLoaded then
+    antibanLoaded = true
+
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    local oldIndex = mt.__index
+    local oldNewindex = mt.__newindex
+
+    setreadonly(mt, false)
+
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+
+        if antiKick then
+            if method == "Kick" or method == "kick" then
+                return nil
+            end
+
+            if method == "FireServer" or method == "InvokeServer" then
+                local arg1 = tostring(args[1] or "")
+
+                if arg1:lower():find("kick")
+                or arg1:lower():find("ban")
+                or arg1:lower():find("remove")
+                or arg1:lower():find("punish")
+                or arg1:lower():find("anticheat")
+                or arg1:lower():find("sanity")
+                or arg1:lower():find("validation")
+                or arg1:lower():find("replication") then
+                    return nil
+                end
+            end
+        end
+
+        return oldNamecall(self, ...)
+    end)
+
+    mt.__index = newcclosure(function(self, key)
+        if antiKick and self == LocalPlayer and (key == "Kick" or key == "kick") then
+            return nil
+        end
+
+        return oldIndex(self, key)
+    end)
+
+    mt.__newindex = newcclosure(function(self, key, value)
+        if antiKick and self == LocalPlayer and (key == "Kick" or key == "kick") then
+            return
+        end
+
+        return oldNewindex(self, key, value)
+    end)
+
+    setreadonly(mt, true)
+
+    local oldFireServer = Instance.new("RemoteEvent").FireServer
+
+    hookfunction(oldFireServer, function(self, ...)
+        if antiKick then
+            local arg1 = tostring(select(1, ...) or "")
+
+            if arg1:lower():find("kick")
+            or arg1:lower():find("ban")
+            or arg1:lower():find("remove")
+            or arg1:lower():find("punish")
+            or arg1:lower():find("anticheat")
+            or arg1:lower():find("sanity")
+            or arg1:lower():find("validation")
+            or arg1:lower():find("replication") then
+                return
+            end
+        end
+
+        return oldFireServer(self, ...)
+    end)
+
+    RunService.Heartbeat:Connect(function()
+        if antiKick then
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChild("Humanoid")
+
+            if hum then
+                if hum.WalkSpeed > 80 then
+                    hum.WalkSpeed = 16
+                end
+
+                if hum.JumpPower > 80 then
+                    hum.JumpPower = 50
+                end
+
+                if hum.Health < 100 then
+                    hum.Health = 100
+                end
+            end
+        end
+    end)
+
+    LocalPlayer.CharacterAdded:Connect(function(newChar)
+        task.wait(0.3)
+
+        local hum = newChar:FindFirstChild("Humanoid")
+
+        if hum and antiKick then
+            hum.Health = math.huge
+        end
+    end)
+end
